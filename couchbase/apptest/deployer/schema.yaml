@@ -1,0 +1,4 @@
+properties:
+  imageTester: 
+    type: string
+    default: $REGISTRY/tester:$TAG

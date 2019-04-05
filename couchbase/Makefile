@@ -1,8 +1,11 @@
+include app.Makefile
 include common.Makefile
 include gcloud.Makefile
 include var.Makefile
 
 APP_DEPLOYER_IMAGE ?= $(CB_DEPLOYER_IMAGE)
+TESTER_IMAGE ?= $(REGISTRY)/tester:$(TAG)
+
 #NAME ?= cb-operator-1
 APP_PARAMETERS ?= { \
   "name": "$(NAME)", \
@@ -23,19 +26,19 @@ APP_PARAMETERS ?= { \
   "indexServiceMemoryQuota": "$(IDX_SVC_QUOTA)", \
   "searchServiceMemoryQuota": "$(SRC_SVC_QUOTA)" \
 }
-#TESTER_IMAGE ?= $(REGISTRY)/example/wordpress/tester:$(TAG)
-APP_TEST_PARAMETERS ?= { \
-  "imageTester": "$(TESTER_IMAGE)" \
-}
 
 # Extend the target as defined in app.Makefile to
 # include real dependencies.
-app/build:: .build/couchbase/deployer
+app/build:: .build/couchbase/deployer \
+            .build/couchbase/tester
+
 
 .build/couchbase: | .build
 	mkdir -p "$@"
 
-.build/couchbase/deployer: deployer/* \
+
+.build/couchbase/deployer: apptest/**/* \
+                           deployer/* \
                            manifest/* \
                            schema.yaml \
                            .build/var/APP_DEPLOYER_IMAGE \
@@ -50,4 +53,12 @@ app/build:: .build/couchbase/deployer
 	    -f deployer/Dockerfile \
 	    .
 	docker push "$(APP_DEPLOYER_IMAGE)"
+	@touch "$@"
+
+
+.build/couchbase/tester: apptest/tester/*
+	$(call print_target, $@)
+	cd apptest/tester \
+	    && docker build --tag "$(TESTER_IMAGE)" .
+	docker push "$(TESTER_IMAGE)"
 	@touch "$@"
